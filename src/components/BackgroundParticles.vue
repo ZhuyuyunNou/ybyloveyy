@@ -9,7 +9,7 @@ import gsap from 'gsap'
 import { useCanvasStage } from '../composables/useCanvasStage'
 import { useMouseParticles } from '../composables/useMouseParticles'
 import type { BurstRequest } from '../composables/useMouseParticles'
-import { glowSprite, heartSprite, HEART_FILL } from '../utils/sprites'
+import { glowSprite } from '../utils/sprites'
 import { BURST_TINTS, COLORS, MOTE_TINTS, RISE_TINTS, pick } from '../utils/palette'
 
 const KIND_STAR = 0
@@ -33,9 +33,6 @@ interface P {
   depth: number
   tint: string
   sprite: HTMLCanvasElement
-  heart: boolean
-  rot: number
-  rotV: number
   life: number
   maxLife: number
   span: number
@@ -68,10 +65,6 @@ let sparkCursor = 0
  */
 let scaleK = 1
 
-/** How many risers apart the floating hearts are, so the finale stays a
-    scattering of hearts instead of a confetti of them. */
-let heartEvery = 11
-
 const PUSH_R = 152
 const PUSH_R2 = PUSH_R * PUSH_R
 
@@ -91,9 +84,6 @@ function blank(): P {
     depth: 1,
     tint: COLORS.violet,
     sprite: glowSprite(COLORS.violet),
-    heart: false,
-    rot: 0,
-    rotV: 0,
     life: 0,
     maxLife: 1,
     span: 1,
@@ -110,10 +100,11 @@ function build(w: number, h: number) {
   // space. Floored so a phone keeps enough of a starfield to read as one.
   const q = Math.max(0.3, Math.min(1, (w * h) / (1440 * 900)))
   scaleK = Math.min(1, Math.max(0.68, Math.min(w, h) / 820))
-  heartEvery = w < 560 ? 22 : w < 900 ? 15 : 11
 
+  // Budgets are deliberately low: the brief is a clean dark gradient with a
+  // whisper of light on it, not a busy particle field.
   stars.length = 0
-  const starCount = Math.round(150 * q) + 40
+  const starCount = Math.round(80 * q) + 24
   for (let i = 0; i < starCount; i++) {
     const p = blank()
     const tint = Math.random() < 0.22 ? pick(MOTE_TINTS) : COLORS.ice
@@ -125,7 +116,7 @@ function build(w: number, h: number) {
     p.vx = p.bx
     p.vy = p.by
     p.r = 0.6 + Math.random() * 1.5
-    p.base = 0.18 + Math.random() * 0.5
+    p.base = 0.12 + Math.random() * 0.32
     p.phase = Math.random() * Math.PI * 2
     p.freq = 0.4 + Math.random() * 1.3
     p.depth = 0.35 + Math.random() * 0.9
@@ -135,7 +126,7 @@ function build(w: number, h: number) {
   }
 
   motes.length = 0
-  const moteCount = Math.round(70 * q) + 20
+  const moteCount = Math.round(34 * q) + 10
   for (let i = 0; i < moteCount; i++) {
     const p = blank()
     const tint = pick(MOTE_TINTS)
@@ -156,12 +147,11 @@ function build(w: number, h: number) {
   }
 
   risers.length = 0
-  const riseCount = Math.round(240 * q) + 60
+  const riseCount = Math.round(88 * q) + 26
   for (let i = 0; i < riseCount; i++) {
     const p = blank()
     const tint = pick(RISE_TINTS)
     p.kind = KIND_RISE
-    p.heart = i % heartEvery === 0
     p.x = Math.random() * w
     p.y = h + 30
     p.by = -(14 + Math.random() * 34)
@@ -169,15 +159,13 @@ function build(w: number, h: number) {
     p.vy = p.by
     p.vx = 0
     p.r = 1.4 + Math.random() * 3.4
-    p.base = 0.24 + Math.random() * 0.4
+    p.base = 0.16 + Math.random() * 0.26
     p.phase = Math.random() * Math.PI * 2
     p.freq = 0.4 + Math.random() * 0.9
     p.depth = 0.5 + Math.random() * 0.9
     p.tint = tint
-    p.sprite = p.heart ? heartSprite(tint) : glowSprite(tint, true)
+    p.sprite = glowSprite(tint, true)
     p.span = 60 + Math.random() * 90
-    p.rot = (Math.random() - 0.5) * 0.6
-    p.rotV = (Math.random() - 0.5) * 0.7
     p.alive = false
     risers.push(p)
   }
@@ -222,10 +210,7 @@ function spawnBurst(req: BurstRequest) {
     p.r = req.size * (0.45 + Math.random() * 1.15)
     p.base = 0.9
     p.tint = pick(BURST_TINTS)
-    p.heart = Math.random() < 0.055
-    p.sprite = p.heart ? heartSprite(p.tint) : glowSprite(p.tint, Math.random() < 0.55)
-    p.rot = Math.random() * Math.PI * 2
-    p.rotV = (Math.random() - 0.5) * 7
+    p.sprite = glowSprite(p.tint, Math.random() < 0.55)
     p.maxLife = req.life * (0.55 + Math.random() * 0.65)
     p.life = p.maxLife
     p.alive = true
@@ -348,7 +333,6 @@ function frame(dt: number, elapsed: number) {
     p.vy += (p.by - p.vy) * relax
     p.x += p.vx * dt + Math.sin(elapsed * p.freq + p.phase) * p.span * dt
     p.y += p.vy * dt
-    p.rot += p.rotV * dt
 
     if (p.y < -40 || p.x < -80 || p.x > w + 80) {
       p.alive = false
@@ -358,18 +342,7 @@ function frame(dt: number, elapsed: number) {
     const f = (h + 140 - p.y) / (h + 180)
     const vis = Math.sin(Math.PI * Math.min(1, Math.max(0, f)))
     const alpha = p.base * Math.pow(vis, 0.8) * (0.55 + 0.45 * energy) * fade
-    if (p.heart) {
-      const size = p.r * 6 * scaleK
-      const s = size / HEART_FILL
-      ctx.globalAlpha = alpha > 1 ? 1 : alpha
-      ctx.save()
-      ctx.translate(p.x, p.y)
-      ctx.rotate(p.rot)
-      ctx.drawImage(p.sprite, -s / 2, -s / 2, s, s)
-      ctx.restore()
-    } else {
-      blit(ctx, p.sprite, p.x, p.y, p.r * 4 * scaleK, alpha)
-    }
+    blit(ctx, p.sprite, p.x, p.y, p.r * 4 * scaleK, alpha)
   }
 
   /* --- click explosions ----------------------------------------------- */
@@ -385,22 +358,11 @@ function frame(dt: number, elapsed: number) {
     p.vy *= drag
     p.x += p.vx * dt
     p.y += p.vy * dt
-    p.rot += p.rotV * dt
 
     const k = p.life / p.maxLife
     const alpha = Math.pow(k, 0.75) * p.base
     const size = p.r * (0.4 + 0.6 * k)
-    if (p.heart) {
-      const s = (size * 7) / HEART_FILL
-      ctx.globalAlpha = alpha > 1 ? 1 : alpha
-      ctx.save()
-      ctx.translate(p.x, p.y)
-      ctx.rotate(p.rot)
-      ctx.drawImage(p.sprite, -s / 2, -s / 2, s, s)
-      ctx.restore()
-    } else {
-      blit(ctx, p.sprite, p.x, p.y, size * 4.5, alpha)
-    }
+    blit(ctx, p.sprite, p.x, p.y, size * 4.5, alpha)
   }
 
   /* --- cursor halo ---------------------------------------------------- */

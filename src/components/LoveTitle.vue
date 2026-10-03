@@ -1,14 +1,14 @@
 <script setup lang="ts">
 /**
- * The composition 叶博一 ❤️ 余韵.
+ * The composition YBY ❤️ YY.
  *
  * Layout notes
  * ------------
- * The row is a flexbox: [name] [heart slot] [name]. The particle heart
- * lives in a fixed-size slot so it takes part in the layout like a glyph,
- * and the row is translated with GSAP so that the *heart slot* always
- * lands on the exact centre of the viewport — which is also where the
- * opening light seed blooms, so stage one and stage three share a centre.
+ * The row is a flexbox: [name] [heart slot] [name]. The heart lives in a
+ * fixed-size slot so it takes part in the layout like a glyph, and the row
+ * is translated with GSAP so that the *heart slot* always lands on the
+ * exact centre of the viewport — which is also where the opening light
+ * seed blooms, so stage one and stage three share a centre.
  *
  * The reveal is a "typewriter that grows out of the middle": each new
  * character appears while the row slides so the characters revealed so
@@ -17,17 +17,17 @@
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import gsap from 'gsap'
-import ParticleHeart from './ParticleHeart.vue'
+import SolidHeart from './SolidHeart.vue'
 
-const LEFT = ['叶', '博', '一']
-const RIGHT = ['余', '韵']
+const LEFT = ['Y', 'B', 'Y']
+const RIGHT = ['Y', 'Y']
 
 const rowEl = ref<HTMLElement | null>(null)
 const leftEl = ref<HTMLElement | null>(null)
 const rightEl = ref<HTMLElement | null>(null)
 const slotEl = ref<HTMLElement | null>(null)
 const haloEl = ref<HTMLElement | null>(null)
-const heartEl = ref<InstanceType<typeof ParticleHeart> | null>(null)
+const heartEl = ref<InstanceType<typeof SolidHeart> | null>(null)
 
 const GLOW_OFF = '0 0 0px rgba(255,120,190,0), 0 0 0px rgba(158,110,255,0)'
 const GLOW_ON = '0 0 18px rgba(255,120,190,0.5), 0 0 54px rgba(158,110,255,0.32)'
@@ -273,15 +273,16 @@ defineExpose({
 
   /** Emphasised heartbeat when the final character lands. */
   pulseHeart() {
-    heartEl.value?.pulse(1)
+    heartEl.value?.beat()
   },
 
-  formHeart(duration?: number): gsap.core.Timeline {
-    return heartEl.value?.form(duration) ?? gsap.timeline()
+  /** Stage three: the heart eases into the composition. */
+  showHeart(duration?: number): gsap.core.Timeline {
+    return heartEl.value?.show(duration) ?? gsap.timeline()
   },
 
   heartbeat(): gsap.core.Timeline {
-    return heartEl.value?.startBeat() ?? gsap.timeline()
+    return heartEl.value?.restingBeat() ?? gsap.timeline()
   },
 
   /**
@@ -308,8 +309,8 @@ defineExpose({
       >
     </h1>
 
-    <div ref="slotEl" class="heart-slot" aria-hidden="true">
-      <ParticleHeart ref="heartEl" />
+    <div ref="slotEl" class="heart-slot">
+      <SolidHeart ref="heartEl" />
     </div>
 
     <h1 ref="rightEl" class="name">

@@ -5,7 +5,9 @@
  *   y = 13 cos(t) − 5 cos(2t) − 2 cos(3t) − cos(4t)
  *
  * Everything is normalised so the shape lives inside the unit circle
- * around the origin, which lets callers scale it with a single radius.
+ * around the origin, which lets a caller scale it with a single radius.
+ * The centrepiece heart is an SVG path sampled from this, so the shape
+ * stays mathematically exact at any size.
  */
 
 export interface Pt {
@@ -52,84 +54,18 @@ export function heartUnitPoint(t: number): Pt {
 }
 
 /**
- * `count` points spread along the outline with roughly equal arc length,
- * so the rim does not clump at the cusp the way a naive uniform-t does.
+ * The curve as an SVG path, drawn into a `size` × `size` box. Sampling is
+ * uniform in `t`, which naturally clusters points at the cusp where the
+ * curvature is highest — exactly where a polygon needs them.
  */
-export function heartOutline(count: number): Pt[] {
-  const steps = 2048
-  const px = new Float64Array(steps + 1)
-  const py = new Float64Array(steps + 1)
-  const cum = new Float64Array(steps + 1)
-
-  let prev = heartUnitPoint(0)
-  px[0] = prev.x
-  py[0] = prev.y
-  let total = 0
-  for (let i = 1; i <= steps; i++) {
+export function heartSvgPath(size = 32, steps = 160): string {
+  const r = size / 2
+  let d = ''
+  for (let i = 0; i < steps; i++) {
     const p = heartUnitPoint((i / steps) * TAU)
-    total += Math.hypot(p.x - prev.x, p.y - prev.y)
-    px[i] = p.x
-    py[i] = p.y
-    cum[i] = total
-    prev = p
+    const x = (r + p.x * r).toFixed(2)
+    const y = (r + p.y * r).toFixed(2)
+    d += `${i === 0 ? 'M' : 'L'}${x} ${y}`
   }
-
-  const out: Pt[] = new Array(count)
-  let j = 0
-  for (let k = 0; k < count; k++) {
-    const target = (k / count) * total
-    while (j < steps - 1 && cum[j + 1] < target) j++
-    const span = cum[j + 1] - cum[j]
-    const f = span > 1e-9 ? (target - cum[j]) / span : 0
-    out[k] = {
-      x: px[j] + (px[j + 1] - px[j]) * f,
-      y: py[j] + (py[j + 1] - py[j]) * f,
-    }
-  }
-  return out
-}
-
-/* A closed polygon of the outline, used for point-in-shape tests. */
-const POLY_N = 192
-const POLY: Pt[] = new Array(POLY_N)
-let polyMinY = Infinity
-let polyMaxY = -Infinity
-for (let i = 0; i < POLY_N; i++) {
-  const p = heartUnitPoint((i / POLY_N) * TAU)
-  POLY[i] = p
-  if (p.y < polyMinY) polyMinY = p.y
-  if (p.y > polyMaxY) polyMaxY = p.y
-}
-
-/** Ray casting against the outline polygon. */
-function insideHeart(x: number, y: number): boolean {
-  let hit = false
-  for (let i = 0, j = POLY_N - 1; i < POLY_N; j = i++) {
-    const xi = POLY[i].x
-    const yi = POLY[i].y
-    const xj = POLY[j].x
-    const yj = POLY[j].y
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit
-  }
-  return hit
-}
-
-/**
- * A point inside the heart.
- *
- * Shrinking the curve toward the origin is the cheap way to do this, but
- * every shrunk copy funnels its cusp into the same spot and paints a
- * vertical streak down the middle. Rejection sampling inside the bounding
- * box gives an even fill instead; the acceptance bias keeps the middle a
- * little sparser than the edges so the shape still reads as a shell.
- */
-export function heartInterior(rand: () => number): Pt {
-  for (let i = 0; i < 24; i++) {
-    const x = rand() * 2 - 1
-    const y = polyMinY + rand() * (polyMaxY - polyMinY)
-    if (!insideHeart(x, y)) continue
-    if (rand() < 0.35 + 0.65 * Math.hypot(x, y)) return { x, y }
-  }
-  // Extremely unlikely fallback — a point on the curve is still on-shape.
-  return heartUnitPoint(rand() * TAU)
+  return `${d}Z`
 }

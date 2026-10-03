@@ -11,6 +11,8 @@
   --violet: #a97bff;
   --indigo: #6f5bff;
   --ice: #dbe7ff;
+  /* The centrepiece heart: one flat rose-magenta. */
+  --heart: #f2497f;
 
   /* surfaces */
   --ink-0: #03010a;
@@ -23,7 +25,9 @@
     "WenQuanYi Micro Hei", system-ui, -apple-system, "Segoe UI", Roboto,
     sans-serif;
 
-  --title-size: clamp(2.3rem, 8.6vw, 7rem);
+  /* Latin runs narrower than the CJK it replaced, so the same optical
+     weight needs a slightly larger size. */
+  --title-size: clamp(2.8rem, 10vw, 8rem);
   --subtitle-size: clamp(0.72rem, 3.3vw, 1.02rem);
 }
 

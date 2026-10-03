@@ -63,7 +63,7 @@ onMounted(() => {
 
   /* ── 3 ── the heart gathers, then starts beating --------------------- */
   tl.add(title.settle(), '>')
-  tl.add(title.formHeart(1.9), '<')
+  tl.add(title.showHeart(1.1), '<')
   tl.call(
     () => {
       title.heartbeat()
@@ -163,7 +163,9 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   filter: blur(80px);
   mix-blend-mode: screen;
-  opacity: 0.55;
+  /* Kept deliberately faint: the brief is a clean dark gradient with a
+     whisper of glow, not a coloured light show. */
+  opacity: 0.3;
   will-change: transform;
 }
 
